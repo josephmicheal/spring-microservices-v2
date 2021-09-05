@@ -1,0 +1,108 @@
+version: '3.7'
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3.8.12-management
+    mem_limit: 700m
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      EUREKA.CLIENT.FETCHREGISTRY: "true"
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBIT_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+    networks: 
+      - currency-network
+
+  zepkin-server:
+    image: openzipkin/zipkin:2.23
+    mem_limit: 700m
+    ports:
+      - "9411:9411"
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      EUREKA.CLIENT.FETCHREGISTRY: "true"
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+    networks: 
+      - currency-network
+    depends_on:
+      - rabbitmq
+    restart: always
+    
+  api-gateway:
+    image: sunleo04/mmv2-api-gateway:0.0.1-SNAPSHOT
+    mem_limit: 700m
+    ports:
+      - "8765:8765"
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      EUREKA.CLIENT.FETCHREGISTRY: "true"
+      #SPRING.ZIPKIN.BASE-URL: http://zepkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBIT_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+    networks: 
+      - currency-network
+    depends_on:
+      - zepkin-server
+      
+  naming-server:
+    image: sunleo04/mmv2-naming-server:0.0.1-SNAPSHOT
+    mem_limit: 700m
+    ports:
+      - "8761:8761"
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      EUREKA.CLIENT.FETCHREGISTRY: "true"
+      #SPRING.ZIPKIN.BASE-URL: http://zepkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBIT_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+    networks: 
+      - currency-network
+    depends_on:
+      - zepkin-server
+    restart: always
+      
+  currency-exchange:
+    image: sunleo04/mmv2-currency-exchange-service:0.0.1-SNAPSHOT
+    mem_limit: 700m
+    #ports:
+    #  - "8000-8001:8000-8001"
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      EUREKA.CLIENT.FETCHREGISTRY: "true"
+      #SPRING.ZIPKIN.BASE-URL: http://zepkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBIT_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+    networks: 
+      - currency-network
+    depends_on:
+      - naming-server
+      - api-gateway
+    
+      
+  currency-conversion:
+    image: sunleo04/mmv2-currency-conversion-service:0.0.1-SNAPSHOT
+    mem_limit: 700m
+    ports:
+      - "8100:8100"
+    environment:
+      EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
+      EUREKA.CLIENT.FETCHREGISTRY: "true"
+      #SPRING.ZIPKIN.BASE-URL: http://zepkin-server:9411/
+      RABBIT_URI: amqp://guest:guest@rabbitmq:5672
+      SPRING_RABBIT_HOST: rabbitmq
+      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+    networks: 
+      - currency-network
+    depends_on:
+      - currency-exchange
+
+      
+networks:
+  currency-network: 

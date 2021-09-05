@@ -10,12 +10,18 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+
 @RestController
 public class CurrencyConversionController {
 	
 	@Autowired
 	private CurrencyExchangeProxy proxy;
 	
+	//@Retry(name = "sample-api", fallbackMethod = "hardcodedResponse")
+	//@CircuitBreaker(name = "default", fallbackMethod = "hardcodedResponse")
+	//@RateLimiter(name="default")
+	@Bulkhead(name="currency-conversion")
 	@GetMapping("/currency-conversion/from/{from}/to/{to}/quantity/{quantity}")
 	public CurrencyConversion calculateCurrencyConversion(
 			@PathVariable String from,
